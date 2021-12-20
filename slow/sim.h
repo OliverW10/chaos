@@ -28,10 +28,8 @@ typedef struct{
 } body_t;
 
 float magnitude(vector2 vec);
-float dist(vector2 p1, vector2 p2);
-// float dist(body_t p1, vector2 p2);
 
-#define G 0.4
+#define G 0.1
 // calculate the acceleration of p1 towards p2
 vector2 calcAccel(vector2 p1, vector2 p2, double m2);
 
@@ -39,7 +37,7 @@ vector2 calcAccel(vector2 p1, vector2 p2, double m2);
 vector2 calcAccels(vector2 pos, attractor_t* bodies, int nattractors);
 
 // simulate a time step
-void step(body_t *target, attractor_t* attractors, int nattractors, double t);
+void step(body_t *target, attractor_t* attractors, int nattractors, double t, double damping);
 
 // returns the index of the closest attractor to pos
 int closest(vector2 pos, attractor_t* abodies, int nbodies);
