@@ -1,13 +1,66 @@
 // in function to use top level await
 async function main(){
 
+var obj = {
+    radius: 0.2,
+    rotation: 0,
+    drag: 0.999,
+    length: 100,
+    accuracy: 0.1,
+    accel_limit: 0.1,
+    renderSize: 400,
+    drawSize: 800,
+};
+
+var gui = new dat.gui.GUI();
+
+gui.remember(obj);
+
+gui.add(obj, 'radius', 0, 1)
+gui.add(obj, 'rotation', 0, Math.PI*2)
+gui.add(obj, 'drag', 0.98, 1, 0.001)
+gui.add(obj, "length", 0, 1000, 1)
+gui.add(obj, "accel_limit", 0, 1, 0.01)
+gui.add(obj, "accuracy", 0.05, 2, 0.05)
+const renderSizeController = gui.add(obj, "renderSize", 10, 2000, 1)
+
+// Choose from accepted values
+// gui.add(obj, 'type', [ 'one', 'two', 'three' ] );
+
+// Choose from named values
+// gui.add(obj, 'speed', { Stopped: 0, Slow: 0.1, Fast: 5 } );
+
+// var f2 = gui.addFolder('Another Folder');
+// f2.add(obj, 'noiseStrength');
+
+// var f3 = f2.addFolder('Nested Folder');
+// f3.add(obj, 'growthSpeed');
+
+
 // webgl stuff partly copied from here
 // https://compile.fi/canvas-filled-three-ways-js-webassembly-and-webgl/
 
 const backgroundCanvas = document.getElementById('bg');
 const foregroundCanvas = document.getElementById('fg');
-const height = backgroundCanvas.height;
-const width = backgroundCanvas.width;
+function updateCanvases(renderSize, drawSize){
+    backgroundCanvas.width = renderSize;
+    backgroundCanvas.height = renderSize;
+    foregroundCanvas.width = renderSize;
+    foregroundCanvas.height = renderSize;
+
+    backgroundCanvas.style.width = drawSize;
+    backgroundCanvas.style.height = drawSize;
+    foregroundCanvas.style.width = drawSize;
+    foregroundCanvas.style.height = drawSize;
+
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+}
+
+renderSizeController.onChange(p=>updateCanvases(p, obj.drawSize))
+gui.width = window.innerWidth-backgroundCanvas.width-30;
+
 
 let mousePos = {x: 0, y: 0}
 document.addEventListener("mousemove", e=>{
@@ -15,14 +68,18 @@ document.addEventListener("mousemove", e=>{
     mousePos.y = e.pageY - backgroundCanvas.offsetTop; 
 })
 let play = true;
+let doGrav = false;
 document.addEventListener("keydown", e=>{
-    console.log(e.key);
     if(e.key == " "){
         if(!play){
             stats.begin();
             window.requestAnimationFrame(render);
         }
         play = !play;
+    }
+    if(e.key == "g"){
+        doGrav = !doGrav;
+        console.log(`grav: ${doGrav}`);
     }
 });
 
@@ -43,6 +100,7 @@ const vertexLocations = [
     1.0, -1.0,
     1.0,  1.0
 ];
+updateCanvases(obj.renderSize, obj.drawSize)
 
 gl.bufferData(
     gl.ARRAY_BUFFER,
@@ -50,15 +108,9 @@ gl.bufferData(
     gl.STATIC_DRAW
 );
 
-const midx = width/2;
-const midy = height/2;
-
-const rad = width*0.2;
-const allMass = 1000;
-const angOffset = 0;
+const allMass = 20000;
 
 const planetsNum = 3;
-const planets = []
 
 function generatePlanets(midx, midy, num, rad, angOffset){
     let planets = []
@@ -130,11 +182,15 @@ const heightId = gl.getUniformLocation(program, 'height');
 
 const planetsNumId = gl.getUniformLocation(program, "planetsNum")
 const planetsId = gl.getUniformLocation(program, 'planets');
+const planetsMassId = gl.getUniformLocation(program, 'm');
 
 const stepsId = gl.getUniformLocation(program, 'steps');
 const stepSizeId = gl.getUniformLocation(program, 'stepSize');
 
 const dampingId = gl.getUniformLocation(program, 'damping');
+const doGravId = gl.getUniformLocation(program, 'doGrav');
+
+const accelLimitId = gl.getUniformLocation(program, "accLimit");
 
 console.log(ctx);
 
@@ -148,36 +204,48 @@ let delta = 0;
 let last_timestamp = 0;
 const render = (timestamp) => {
     stats.begin();
+
+    const midx = obj.renderSize/2;
+    const midy = obj.renderSize/2;
     delta = timestamp-last_timestamp;
     if(play){
         sim_timestamp += delta;
     }
     last_timestamp = timestamp;
-    const planets = generatePlanets(midx, midy, planetsNum, rad, sim_timestamp*0.0001);
+    const planets = generatePlanets(midx, midy, planetsNum, obj.renderSize*obj.radius, obj.rotation);
     const planetsPosOnly = getPosArray(planets)
 
-    const stepsNum = Math.round(sim_timestamp*0.005);
-    // Update timestamp
-    gl.uniform1f(timestampId, sim_timestamp*0.3);
-    gl.uniform1f(widthId, width);
-    gl.uniform1f(heightId, height);
-    gl.uniform1i(planetsNumId, planetsNum);
-    gl.uniform1fv(planetsId, planetsPosOnly);
-    gl.uniform1i(stepsId, stepsNum);//Math.round((timestamp%10)*1000));
-    gl.uniform1f(stepSizeId, 1);
-    gl.uniform1f(dampingId, 0.997);
-    // Draw
-    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    if(obj.length/obj.accuracy != 20000){
+        gl.uniform1f(timestampId, 0);
+        gl.uniform1f(widthId, obj.renderSize);
+        gl.uniform1f(heightId, obj.renderSize);
+        gl.uniform1i(planetsNumId, planetsNum);
+        gl.uniform1f(planetsMassId, 50*obj.renderSize**2);
+        gl.uniform1fv(planetsId, planetsPosOnly);
+        gl.uniform1i(stepsId, obj.length/obj.accuracy);
+        gl.uniform1f(stepSizeId, obj.accuracy);
+        gl.uniform1f(dampingId, obj.drag);
+        gl.uniform1f(doGravId, doGrav?1.0:0.0);
+        gl.uniform1f(accelLimitId, obj.accel_limit);
+        // Draw
+        gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    }
 
-    ctx.clearRect(0, 0, width, height);
-    let target = {pos:{x:mousePos.x, y:mousePos.y}, vel:{x:0, y:0}};
-    for(let i = 0; i < stepsNum; i++){
-        ctx.beginPath();
-        ctx.lineWidth = 1;
-        ctx.moveTo(target.pos.x, target.pos.y);
-        step(target, planets, planets.length, 1, 0.997)
-        ctx.lineTo(target.pos.x, target.pos.y);
-        ctx.stroke();
+    ctx.clearRect(0, 0, obj.renderSize, obj.renderSize);
+    let target = {pos:{x:mousePos.x, y:obj.renderSize-mousePos.y}, vel:{x:0, y:0}};
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.moveTo(target.pos.x, obj.renderSize-target.pos.y);
+    for(let i = 0; i < obj.length/obj.accuracy; i++){
+        step(target, planets, planets.length, obj.step_size, 0.999, 0.1)
+        if(i%5 == 0){
+            ctx.lineTo(target.pos.x, obj.renderSize-target.pos.y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.moveTo(target.pos.x, obj.renderSize-target.pos.y);
+        }
     }
     // console.log(`start: x ${mousePos.x} y ${mousePos.y}  end: x ${target.pos.x} y ${target.pos.y}`);
 

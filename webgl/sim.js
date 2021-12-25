@@ -11,14 +11,12 @@ function distanceSqr(p1, p2){
 function distance(p1, p2){
     return Math.sqrt(distanceSqr(p1, p2));
 }
-let G = 0.1;
-function calcAccel(pos, other, m2){
+function calcAccel(pos, other, mass){
     dx = (other.x-pos.x); // x and y distances
     dy = (other.y-pos.y);
     distS = dx*dx + dy*dy; // dist squared
     dist = Math.sqrt(distS);
-    mag = 0.5*G*m2/distS; // magnitude of change
-    ret = {x: 0, y: 0}
+    mag = mass/distS; // magnitude of change
     // normalize dx and dy and multiply by magnitude
     return {x: mag*dx/dist, y: mag*dy/dist}
 }
@@ -33,7 +31,7 @@ function calcAccels(pos, attractors, nattractors){
     return total;
 }
 
-function step(target, attractors, nattractors, t, damping){
+function step(target, attractors, nattractors, t, damping, limit){
     // adds targets velocity times the delta time to its pos ( ut )
     target.pos.x += target.vel.x * t * damping;
     target.pos.y += target.vel.y * t * damping;
@@ -44,10 +42,13 @@ function step(target, attractors, nattractors, t, damping){
     // calculates acceleration from "center force"
     // 
     
-    // clamps acceleration, beacuse the acceleration is inverse to r^2
-    // when r (distance) nears 0 the acceleration gets very big beacuse its a hyperbola
-    accel.x = Math.max(-0.5, Math.min(0.5, accel.x));
-    accel.y = Math.max(-0.5, Math.min(0.5, accel.y));
+    // clamps acceleration, beacuse the acceleration gets very big when dist small
+    // clamp magnitude of vector rather than x and y
+    let accel_len = distance(accel, {x: 0, y: 0})
+    let clamped_accel_len = Math.max(-limit, Math.min(limit, accel_len));
+    let accel_norm = {x: accel.x/accel_len, y: accel.y/accel_len}
+    accel.x = accel_norm.x*clamped_accel_len;
+    accel.y = accel_norm.y*clamped_accel_len;
 
     // adds accel to velocity
     target.vel.x += accel.x*t;

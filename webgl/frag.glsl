@@ -1,4 +1,3 @@
-#define G 0.1
 // Mobiles need this
 precision highp float;
 
@@ -11,23 +10,25 @@ uniform int planetsNum;
 
 uniform float planets[2*MAX_PLANETS];
 
-#define MAX_STEPS 10000
+#define MAX_STEPS 20000
 uniform int steps;
 uniform float stepSize;
 
 uniform float damping;
 
-#define m 20000.0 // mass of planets
-#define ACC_LIMIT 0.5
+uniform float doGrav;
+
+uniform float m; // mass of planets
+uniform float accLimit;
 
 #define g 0.01 // strength of the center force
-#define height 5000 // how much the center force scales with distance
+#define height 5000.0 // how much the center force scales with distance
 
 vec2 getAcceleration(vec2 pos, vec2 planetPos){
     vec2 diff = planetPos.xy-pos.xy;
     float distSqr = diff.x*diff.x + diff.y*diff.y;
     float dist = sqrt(distSqr);
-    float mag = (0.5*G*m)/distSqr;
+    float mag = m/distSqr;
     return vec2(mag*diff.x/dist, mag*diff.y/dist);
 }
 
@@ -55,6 +56,7 @@ void main() {
 
     // the loop length has to be known at compile time (so cant be a uniform)
     // instead loop to a MAX and break where you actually want to loop to
+    // https://stackoverflow.com/questions/38986208/webgl-loop-index-cannot-be-compared-with-non-constant-expression/39298265
     vec2 pos = gl_FragCoord.xy;
     vec2 vel = vec2(0.0);
     for(int s=0;s<MAX_STEPS;s++){
@@ -69,10 +71,11 @@ void main() {
         }
 
         // calculates acceleration from 'center force'
-        // acceleration.x += sin(center.x-pos.x)
+        // acceleration += sin((center-pos)/vec2(height))*vec2(doGrav);
 
         // clamps acceleration
-        acceleration = min( max( acceleration, vec2(-ACC_LIMIT) ), vec2(ACC_LIMIT));
+        float clamped_len = min(max(length(acceleration), -accLimit), accLimit);
+        acceleration = normalize(acceleration) * clamped_len;
 
         // adds acceleration to velocity
         vel += acceleration*stepSize;
