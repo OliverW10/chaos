@@ -24,19 +24,6 @@ gui.add(obj, "accel_limit", 0, 1, 0.01)
 gui.add(obj, "accuracy", 0.05, 2, 0.05)
 const renderSizeController = gui.add(obj, "renderSize", 10, 2000, 1)
 
-// Choose from accepted values
-// gui.add(obj, 'type', [ 'one', 'two', 'three' ] );
-
-// Choose from named values
-// gui.add(obj, 'speed', { Stopped: 0, Slow: 0.1, Fast: 5 } );
-
-// var f2 = gui.addFolder('Another Folder');
-// f2.add(obj, 'noiseStrength');
-
-// var f3 = f2.addFolder('Nested Folder');
-// f3.add(obj, 'growthSpeed');
-
-
 // webgl stuff partly copied from here
 // https://compile.fi/canvas-filled-three-ways-js-webassembly-and-webgl/
 
@@ -253,9 +240,9 @@ const render = (timestamp) => {
     if(play){
         window.requestAnimationFrame(render);
     }
-};
+} // render
 
 window.requestAnimationFrame(render);
-}
+} // main
 
 main();
