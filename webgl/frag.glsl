@@ -21,7 +21,11 @@ uniform float doGrav;
 uniform float m; // mass of planets
 uniform float accLimit;
 
-#define g 0.01 // strength of the center force
+uniform float x;
+uniform float y;
+uniform float scale;
+
+#define g 0.00000000001 // strength of the center force
 #define height 5000.0 // how much the center force scales with distance
 
 vec2 getAcceleration(vec2 pos, vec2 planetPos){
@@ -48,7 +52,9 @@ int findClosest(vec2 pos){
 }
 
 void main() {
-    vec2 center = vec2(float(width)/2.0, float(height)/2.0);
+    vec2 center = vec2(x, y);
+    vec2 offset = (gl_FragCoord.xy / vec2(width, width))-vec2(0.5);
+    vec2 pos = center + offset * vec2(scale);
 
     vec2 dampingVec = vec2(damping);
     
@@ -57,7 +63,6 @@ void main() {
     // the loop length has to be known at compile time (so cant be a uniform)
     // instead loop to a MAX and break where you actually want to loop to
     // https://stackoverflow.com/questions/38986208/webgl-loop-index-cannot-be-compared-with-non-constant-expression/39298265
-    vec2 pos = gl_FragCoord.xy;
     vec2 vel = vec2(0.0);
     for(int s=0;s<MAX_STEPS;s++){
         if(s>=steps){break;}
@@ -71,7 +76,7 @@ void main() {
         }
 
         // calculates acceleration from 'center force'
-        // acceleration += sin((center-pos)/vec2(height))*vec2(doGrav);
+        // acceleration += sin((center-pos)/vec2(height));
 
         // clamps acceleration
         float clamped_len = min(max(length(acceleration), -accLimit), accLimit);
