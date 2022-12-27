@@ -1,7 +1,6 @@
 // Mobiles need this
 precision highp float;
 
-uniform float timestamp;
 uniform float width;
 uniform float height;
 
@@ -9,16 +8,13 @@ uniform float height;
 uniform int planetsNum;
 
 uniform float planets[2*MAX_PLANETS];
+uniform float mass; // mass of planets
 
 #define MAX_STEPS 20000
 uniform int steps;
 uniform float stepSize;
 
 uniform float damping;
-
-uniform float doGrav;
-
-uniform float m; // mass of planets
 uniform float accLimit;
 
 uniform float x;
@@ -32,7 +28,7 @@ vec2 getAcceleration(vec2 pos, vec2 planetPos){
     vec2 diff = planetPos.xy-pos.xy;
     float distSqr = diff.x*diff.x + diff.y*diff.y;
     float dist = sqrt(distSqr);
-    float mag = m/distSqr;
+    float mag = mass/distSqr;
     return vec2(mag*diff.x/dist, mag*diff.y/dist);
 }
 
@@ -100,13 +96,13 @@ void main() {
     // cant index an array from a non-constant expression
     // https://stackoverflow.com/questions/19529690/index-expression-must-be-constant-webgl-glsl-error
     if(c==0)
-        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
     if(c==1)
-        gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        gl_FragColor = vec4(0.1333, 0.1333, 0.1333, 1.0);
     if(c==2)
-        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        gl_FragColor = vec4(0.109, 0.365, 0.6, 1.0);
     if(c==3)
-        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+        gl_FragColor = vec4(1.0, 0.521, 0.552, 1.0);
     if(c==4)
         gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
     if(c==5)
